@@ -1,9 +1,12 @@
 package main
 
 import (
-	"encoding/json"
 	"log"
 	"net/http"
+
+	"github.com/manavdhamecha77/Concurrent-Cinema-Booking/internal/booking"
+	"github.com/manavdhamecha77/Concurrent-Cinema-Booking/internal/utils"
+	"github.com/redis/go-redis/v9"
 )
 
 func main() {
@@ -13,9 +16,23 @@ func main() {
 
 	mux.Handle("GET /", http.FileServer(http.Dir("static")))
 
+	store := booking.NewRedisStore(redis.NewClient("localhost:6379"))
+
+	svc := booking.NewService(store)
+
+	bookingHandler := booking.NewHandler(svc)
+
+	mux.HandleFunc("GET /movies/:movieID/seats", bookingHandler.ListSeats)
+
 	if err := http.ListenAndServe(":8080", mux); err != nil {
 		log.Fatal(err)
 	}
+}
+
+type SeatInfo struct {
+	SeatID string `json:seat_id"`
+	UserID string `json:user_id"`
+	Booked bool   `json:booked"`
 }
 
 var movies = []movieResponse{
@@ -24,18 +41,12 @@ var movies = []movieResponse{
 }
 
 func listMovies(w http.ResponseWriter, r *http.Request) {
-	WriteJSON(w, http.StatusOK, movies)
-}
-
-func WriteJSON(w http.ResponseWriter, status int, v any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(v)
+	utils.WriteJSON(w, http.StatusOK, movies)
 }
 
 type movieResponse struct {
 	ID          string `json:"id"`
 	Title       string `json:"title"`
-	Rows        int `json:"rows"`
-	SeatsPerRow int `json:"seats_per_row"`
+	Rows        int    `json:"rows"`
+	SeatsPerRow int    `json:"seats_per_row"`
 }
