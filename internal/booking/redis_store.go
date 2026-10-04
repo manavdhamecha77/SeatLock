@@ -61,7 +61,7 @@ func (s *RedisStore) ListBookings(movieID string) []Booking {
 			continue
 		}
 		session, err := parseSession(val)
-		if err == nil {
+		if err != nil {
 			continue
 		}
 
