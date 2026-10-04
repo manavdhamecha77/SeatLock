@@ -2,6 +2,7 @@ package booking
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"time"
@@ -55,14 +56,14 @@ func (s *RedisStore) hold(b Booking) (Booking, error) {
 	id := uuid.New().String()
 	now := time.Now()
 	ctx := context.Background()
-	key := fmt.Sprintf("seat:%s:%s", b.MovieID,b.SeatID)
+	key := fmt.Sprintf("seat:%s:%s", b.MovieID, b.SeatID)
 
 	b.ID = id
-	// val, _ := json.Marshal(b)
+	val, _ := json.Marshal(b)
 
-	res := s.rdb.SetArgs(ctx, key, b, redis.SetArgs{
+	res := s.rdb.SetArgs(ctx, key, val, redis.SetArgs{
 		Mode: "NX", // set if not exists
-		TTL: defaultHoldTTL,
+		TTL:  defaultHoldTTL,
 	})
 	ok := res.Val() == "OK"
 
@@ -71,11 +72,11 @@ func (s *RedisStore) hold(b Booking) (Booking, error) {
 	}
 
 	return Booking{
-		ID:      id,
-		MovieID: b.MovieID,
-		SeatID:  b.SeatID,
-		UserID:  b.UserID,
-		Status:  "held",
+		ID:        id,
+		MovieID:   b.MovieID,
+		SeatID:    b.SeatID,
+		UserID:    b.UserID,
+		Status:    "held",
 		ExpiresAt: now.Add(defaultHoldTTL),
 	}, nil
 }

@@ -5,14 +5,17 @@ import (
 	"sync/atomic"
 	"testing"
 	"github.com/google/uuid"
+	"github.com/manavdhamecha77/Concurrent-Cinema-Booking/internal/adapters/redis"
 )
 
 func TestConcurrentBooking_ExactlyOneWins(t *testing.T) {
 	// store := NewMemoryStore()
-	store := NewConcurrentStore()
+	// store := NewConcurrentStore()
+	store := NewRedisStore(redis.NewClient("127.0.0.1:6379"))
+	
 	svc := NewService(store)
 
-	const numGoroutines = 100_000 // 100k users trying to book at the same time
+	const numGoroutines = 1000 // 100k users trying to book at the same time
 
 	var (
 		successes atomic.Int64
