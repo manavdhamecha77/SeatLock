@@ -11,6 +11,8 @@ func main() {
 
 	mux.HandleFunc("GET /movies", listMovies)
 
+	mux.Handle("GET /", http.FileServer(http.Dir("static")))
+
 	if err := http.ListenAndServe(":8080", mux); err != nil {
 		log.Fatal(err)
 	}
