@@ -392,8 +392,21 @@ header h1{font-size:clamp(1.5rem,3vw,2.5rem);font-weight:900;letter-spacing:-.06
           if (body) opts.body = JSON.stringify(body);
           return fetch(path, opts).then(function (r) {
             if (r.status === 204) return null;
-            return r.json().then(function (data) {
-              if (!r.ok) throw new Error(data.error || "request failed");
+            return r.text().then(function (text) {
+              var data = null;
+              if (text) {
+                try {
+                  data = JSON.parse(text);
+                } catch (_) {
+                  if (!r.ok) throw new Error("server error (" + r.status + ")");
+                  return null;
+                }
+              }
+              if (!r.ok) {
+                throw new Error(
+                  (data && data.error) || "request failed (" + r.status + ")",
+                );
+              }
               return data;
             });
           });
@@ -527,7 +540,7 @@ header h1{font-size:clamp(1.5rem,3vw,2.5rem);font-weight:900;letter-spacing:-.06
             .then(function (data) {
               activeSession = {
                 sessionID: data.session_id,
-                movieID: data.movie_id,
+                movieID: data.movieID,
                 seatID: data.seat_id,
                 expiresAt: new Date(data.expires_at),
               };

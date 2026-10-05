@@ -16,7 +16,7 @@ func TestConcurrentBooking_ExactlyOneWins(t *testing.T) {
 
 	svc := NewService(store)
 
-	const numGoroutines = 1000 // 100k users trying to book at the same time
+	const numGoroutines = 100_000 // 100k users trying to book at the same time
 
 	var (
 		successes atomic.Int64

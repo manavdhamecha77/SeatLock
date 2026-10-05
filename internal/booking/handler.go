@@ -28,6 +28,12 @@ func (h *handler) HoldSeat(w http.ResponseWriter, r *http.Request) {
 	var req holdSeatRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Println(err)
+		utils.WriteError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if req.UserID == "" {
+		utils.WriteError(w, http.StatusBadRequest, "user_id is required")
 		return
 	}
 
@@ -40,6 +46,7 @@ func (h *handler) HoldSeat(w http.ResponseWriter, r *http.Request) {
 	session, err := h.svc.Book(data)
 	if err != nil {
 		log.Println(err)
+		utils.WriteError(w, http.StatusConflict, err.Error())
 		return
 	}
 
@@ -88,15 +95,20 @@ func (h *handler) ConfirmSession(w http.ResponseWriter, r *http.Request) {
 
 	var req holdSeatRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Println(err)
+		utils.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.UserID == "" {
+		utils.WriteError(w, http.StatusBadRequest, "user_id is required")
 		return
 	}
 
 	session, err := h.svc.ConfirmSeat(r.Context(), sessionID, req.UserID)
 	if err != nil {
+		log.Println(err)
+		utils.WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -124,15 +136,18 @@ func (h *handler) ReleaseSession(w http.ResponseWriter, r *http.Request) {
 	var req holdSeatRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Println(err)
-		return
-	}
-	if req.UserID == "" {
+		utils.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
-	err := h.svc.ReleaseSeat(r.Context(), sessionID, req.UserID)
-	if err != nil {
+	if req.UserID == "" {
+		utils.WriteError(w, http.StatusBadRequest, "user_id is required")
+		return
+	}
+
+	if err := h.svc.ReleaseSeat(r.Context(), sessionID, req.UserID); err != nil {
 		log.Println(err)
+		utils.WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 

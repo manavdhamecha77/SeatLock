@@ -68,36 +68,43 @@ func (s *RedisStore) ListBookings(movieID string) []Booking {
 		sessions = append(sessions, session)
 	}
 
-	return []Booking{}
+	return sessions
 }
 
 func (s *RedisStore) hold(b Booking) (Booking, error) {
 	id := uuid.New().String()
 	now := time.Now()
 	ctx := context.Background()
-	key := fmt.Sprintf("seat:%s:%s", b.MovieID, b.SeatID)
+	seatKey := fmt.Sprintf("seat:%s:%s", b.MovieID, b.SeatID)
 
-	b.ID = id
-	val, _ := json.Marshal(b)
-
-	res := s.rdb.SetArgs(ctx, key, val, redis.SetArgs{
-		Mode: "NX", // set if not exists
-		TTL:  defaultHoldTTL,
-	})
-	ok := res.Val() == "OK"
-
-	if !ok {
-		return Booking{}, ErrSeatAlreadyBooked
-	}
-
-	return Booking{
+	session := Booking{
 		ID:        id,
 		MovieID:   b.MovieID,
 		SeatID:    b.SeatID,
 		UserID:    b.UserID,
 		Status:    "held",
 		ExpiresAt: now.Add(defaultHoldTTL),
-	}, nil
+	}
+
+	val, _ := json.Marshal(session)
+
+	res := s.rdb.SetArgs(ctx, seatKey, val, redis.SetArgs{
+		Mode: "NX", // set if not exists
+		TTL:  defaultHoldTTL,
+	})
+	if res.Val() != "OK" {
+		return Booking{}, ErrSeatAlreadyBooked
+	}
+
+	// Store reverse-lookup: session:{id} -> seat key
+	// TTL matches the seat hold so both expire together
+	if err := s.rdb.Set(ctx, sessionKey(id), seatKey, defaultHoldTTL).Err(); err != nil {
+		// Seat key was set; roll it back to avoid a ghost hold
+		s.rdb.Del(ctx, seatKey)
+		return Booking{}, err
+	}
+
+	return session, nil
 }
 
 func parseSession(val string) (Booking, error) {
