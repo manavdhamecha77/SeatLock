@@ -1,4 +1,4 @@
-# Concurrent Cinema Booking
+# SeatLock
 
 ![Cinema Booking UI](static/image.png)
 
